@@ -8,15 +8,20 @@ on:
         type: string
         required: true
 
-env:
-  SERVER_IMAGE_NAME: "bitergia/bitergia-analytics-sortinghat"
-  WORKER_IMAGE_NAME: "bitergia/bitergia-analytics-sortinghat-worker"
-
 jobs:
   build-image:
     runs-on: ubuntu-latest
     needs: [build-package]
     environment: docker-release
+    strategy:
+      matrix:
+        include:
+          - image: "bitergia/bitergia-analytics"
+            dockerfile: "docker/Dockerfile"
+          - image: "bitergia/bitergia-analytics-sortinghat"
+            dockerfile: "docker-sortinghat/server.dockerfile"
+          - image: "bitergia/bitergia-analytics-sortinghat-worker"
+            dockerfile: "docker-sortinghat/worker.dockerfile"
     steps:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # 3.3.0
 
@@ -37,54 +42,28 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Server Docker metadata
-        id: meta-server
+      - name: Docker metadata
+        id: meta
         uses: docker/metadata-action@507c2f2dc502c992ad446e3d7a5dfbe311567a96 # v4.3.0
         with:
           images: |
-            ${{ env.SERVER_IMAGE_NAME }}
+            ${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}},value=${{ inputs.version }}
 
-      - name: Server Build and push
+      - name: Build and push
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v4.0.0
         with:
           platforms: linux/amd64,linux/arm64
           context: .
-          file: "docker-sortinghat/server.dockerfile"
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: ${{ steps.meta-server.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
 
-      - name: Server Sign image with a key
+      - name: Sign image with a key
         run: |
           cosign sign --key env://COSIGN_PRIVATE_KEY ${TAGS}
         env:
-          TAGS: ${{ steps.meta-server.outputs.tags }}
-          COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
-          COSIGN_PASSWORD: ${{secrets.COSIGN_PASSWORD}}
-
-      - name: Worker Docker metadata
-        id: meta-worker
-        uses: docker/metadata-action@507c2f2dc502c992ad446e3d7a5dfbe311567a96 # v4.3.0
-        with:
-          images: |
-            ${{ env.WORKER_IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}},value=${{ inputs.version }}            
-
-      - name: Worker Build and push
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v4.0.0
-        with:
-          platforms: linux/amd64,linux/arm64
-          context: .
-          file: "docker-sortinghat/worker.dockerfile"
-          push: true
-          tags: ${{ steps.meta-worker.outputs.tags }}
-
-      - name: Worker Sign image with a key
-        run: |
-          cosign sign --key env://COSIGN_PRIVATE_KEY ${TAGS}
-        env:
-          TAGS: ${{ steps.meta-worker.outputs.tags }}
+          TAGS: ${{ steps.meta.outputs.tags }}
           COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
           COSIGN_PASSWORD: ${{secrets.COSIGN_PASSWORD}}
