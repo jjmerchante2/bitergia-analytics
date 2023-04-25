@@ -16,10 +16,13 @@ jobs:
       matrix:
         include:
           - image: "bitergia/bitergia-analytics"
+            context: "docker"
             dockerfile: "docker/Dockerfile"
           - image: "bitergia/bitergia-analytics-sortinghat"
+            context: "docker-sortinghat"
             dockerfile: "docker-sortinghat/server.dockerfile"
           - image: "bitergia/bitergia-analytics-sortinghat-worker"
+            context: "docker-sortinghat"
             dockerfile: "docker-sortinghat/worker.dockerfile"
     steps:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # 3.3.0
@@ -54,7 +57,7 @@ jobs:
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v4.0.0
         with:
           platforms: linux/amd64,linux/arm64
-          context: .
+          context: "${{ matrix.context }}"
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
