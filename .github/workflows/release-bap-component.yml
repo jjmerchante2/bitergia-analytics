@@ -1,0 +1,226 @@
+name: Release BAP component
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version number to use'
+        type: string
+        required: true
+      git_email:
+        description: 'Git config email'
+        type: string
+        required: true
+      git_name:
+        description: 'Git config name'
+        type: string
+        required: true
+      release_candidate:
+        description: 'Create a release candidate version'
+        type: string
+        required: true
+      module_name:
+        description: 'Name of the module'
+        type: string
+        required: true
+      module_repository:
+        description: 'Repository of the module'
+        type: string
+        required: true
+      module_directory:
+        description: 'Location of the module in Bitergia Analytics'
+        type: string
+        required: true
+      forced_version:
+        description: 'Force version when there are no changes.'
+        type: string
+        required: true
+      plugin_url:
+        description: 'Installable URL for Bitergia Analytics plugin.'
+        type: string
+        required: false
+    secrets:
+      access_token:
+        description: 'Token for updating repositories'
+        required: true
+
+    outputs:
+      notes:
+        description: "Notes content for the package"
+        value: ${{ jobs.release.outputs.notes }}
+      plugin_url:
+        description: "Installable URL for BAP plugin"
+        value: ${{ jobs.release.outputs.plugin_url }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: bap-release
+    outputs:
+      notes: ${{ steps.notes.outputs.notes }}
+      plugin_url: ${{ steps.assets.outputs.plugin_url }}
+    
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: ${{ inputs.module_repository }}
+          path: ${{ inputs.module_directory }}
+          token: '${{ secrets.access_token }}'
+          fetch-depth: 0
+      
+      - name: Set up Git config
+        run: |
+          git config --global user.email "${{ inputs.git_email }}"
+          git config --global user.name "${{ inputs.git_name }}"
+
+      - name: Install release-tools
+        run: pip install git+https://github.com/Bitergia/release-tools.git#egg=release-tools
+
+      - name: Update version in JSON files
+        if: ${{ inputs.module_directory == 'bitergia-analytics-plugin' }}
+        shell: bash
+        run: |
+          package_contents="$(jq '.version = "${{ inputs.version }}"' package.json)" && \
+          echo -E "${package_contents}" > package.json
+          osd_contents="$(jq '.version = "${{ inputs.version }}"' opensearch_dashboards.json)" && \
+          echo -E "${osd_contents}" > opensearch_dashboards.json
+          echo ${osd_contents}
+        working-directory: ${{ inputs.module_directory }}
+      
+      - id: version
+        name: Update version file
+        if: ${{ inputs.module_directory != 'bitergia-analytics-plugin' }}
+        shell: bash
+        run: |
+          new_version=${{ inputs.version }}
+          echo $new_version > version
+        working-directory: ${{ inputs.module_directory }}
+
+      - name: Update plugin URL in Dockerfile
+        if: ${{ inputs.module_directory == 'bitergia-analytics-opensearch-dashboards' }}
+        id: dockerfile
+        shell: bash
+        run: |
+          url='${{ inputs.plugin_url }}'
+          line="RUN opensearch-dashboards-plugin install $url"
+          sed -i "/bitergia-analytics-plugin/s|.*|$line|" Dockerfile
+        working-directory: ${{ inputs.module_directory }}
+      
+      - id: notes
+        name: Generate release notes
+        run: |
+          version=${{ inputs.version }}
+          eof="EOF$(date +%s)"
+          release_file="releases/$version.md"
+          if [ ${{ inputs.release_candidate }} == 'true' ]
+          then
+            newsArg=''
+            rcArg='--pre-release'
+          else
+            newsArg='--news'
+            rcArg=''
+          fi
+
+          if [ ${{ inputs.forced_version }} != true ]
+          then
+            notes "${{ inputs.module_name }}" $version $newsArg --authors $rcArg
+          else
+            module_name=${{ inputs.module_name }}
+            today=$(date -u "+%Y-%m-%d")
+            cat << EOF > $release_file
+            ## $module_name $version - ($today)
+            
+            * No changes on this component. The version is bumped to align it
+              with the rest of the components.
+          EOF
+            # Update NEWS file if it is not a release candidate
+            if [ ${{ inputs.release_candidate }} != 'true' ]
+            then
+              mv NEWS old_NEWS
+              echo -e "# Releases\n" >> NEWS
+              cat $release_file >> NEWS
+              cat old_NEWS | tail -n +2 >> NEWS
+              rm old_NEWS
+            fi
+          fi
+
+          # Save release notes in 'notes' output
+          echo 'notes<<$eof' >> $GITHUB_OUTPUT
+          cat $release_file >> $GITHUB_OUTPUT
+          echo '$eof' >> $GITHUB_OUTPUT
+        working-directory: ${{ inputs.module_directory }}
+      
+      - id: current_time
+        name: Store current time to get the release workflow
+        run: |
+          datetime=$(date +"%Y-%m-%dT%H:%M:%S%z")
+          echo "datetime=$datetime" >> $GITHUB_OUTPUT
+          echo $datetime
+
+      - id: publish
+        name: Publish new version.
+        run: |
+          if [ ${{ inputs.release_candidate }} == 'true' ]
+          then
+            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --no-cleanup --add-all
+          else
+            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --add-all
+          fi
+        working-directory: ${{ inputs.module_directory }}
+      
+      - id: wait-for-release
+        name: Wait for release to finish.
+        continue-on-error: true
+        run: |
+          url="https://api.github.com/repos/${{ inputs.module_repository }}/actions/workflows/release.yml/runs?created=>${{ steps.current_time.outputs.datetime }}"
+          while true
+          do
+            workflows=$(curl -sS -H "Authorization: token ${{ secrets.access_token }}" $url)
+            if [ $(echo $workflows | jq '.total_count') -eq 0 ]
+            then
+              echo "Release workflow did not start"
+              sleep 60
+              continue
+            fi
+
+            release_conclusion=$(echo $workflows | jq '.workflow_runs[0].conclusion')
+            release_status=$(echo $workflows | jq '.workflow_runs[0].status')
+            if [ $release_status = \"completed\" -a $release_conclusion = \"success\" ]
+            then
+              echo "Release completed!";
+              break;
+            elif [ $release_status = \"completed\" -a $release_conclusion != \"success\" ]
+            then
+              echo "Release failed!";
+              exit 1;
+            else
+              echo $release_conclusion $release_status
+              echo "Waiting for release..."
+              sleep 60
+            fi
+          done
+      
+      - id: assets
+        name: Get plugin installable URL
+        shell: bash
+        if: steps.wait-for-release.outcome == 'success' && ${{ inputs.module_directory == 'bitergia-analytics-plugin' }}
+        run: |
+          url="https://api.github.com/repos/bitergia-analytics/bitergia-analytics-plugin/releases/tags/${{ inputs.version }}"
+          assets=$(curl -sS -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" $url)
+          plugin_url=$(echo $assets | jq '.assets[0].browser_download_url')
+          echo "plugin_url=$plugin_url" >> $GITHUB_OUTPUT
+          echo $plugin_url
+      
+      - id: rollback
+        name: Rollback last commits and remove tag
+        if: steps.wait-for-release.outcome == 'failure'
+        run: |
+          git reset --hard HEAD~1
+          git push -f origin main
+          git tag -d ${{ inputs.version }}
+          git push --delete origin ${{ inputs.version }}
+
+          # Force to fail
+          exit 1
+        working-directory: ${{ inputs.module_directory }}

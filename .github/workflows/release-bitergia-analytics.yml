@@ -1,0 +1,381 @@
+name: Bitergia Analytics release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_candidate:
+        description: "Create a release candidate version"
+        required: true
+        type: boolean
+        default: false
+      git_email:
+        description: "Git email for commits messages"
+        required: true
+        default: "sduenas@bitergia.com"
+      git_name:
+        description: "Git name for commits messages"
+        required: true
+        default: "Santiago Dueñas"
+
+jobs:
+  variables-job:
+    name: Set variables
+    runs-on: ubuntu-latest
+    outputs:
+      git_email: ${{ steps.variables.outputs.git_email }}
+      git_name: ${{ steps.variables.outputs.git_name }}
+      release_candidate: ${{ steps.variables.outputs.release_candidate }}
+    steps:
+      - id: variables
+        name: variables
+        run: |
+          echo "git_email=${{ inputs.git_email }}" >> $GITHUB_OUTPUT
+          echo "git_name=${{ inputs.git_name}}" >> $GITHUB_OUTPUT
+          echo "release_candidate=${{ inputs.release_candidate}}" >> $GITHUB_OUTPUT
+
+  setup:
+    name: Get version from each repository
+    runs-on: ubuntu-latest
+    needs:
+      - variables-job
+    strategy:
+      matrix:
+        repository: [
+          bitergia-analytics,
+          bitergia-analytics-opensearch,
+          bitergia-analytics-opensearch-dashboards,
+          bitergia-analytics-plugin
+        ]
+    outputs:
+      bitergia_analytics_version: ${{ steps.semverup.outputs.bitergia-analytics }}
+      bitergia_analytics_forced_version: ${{ steps.semverup.outputs.bitergia-analytics_forced_version }}
+      opensearch_version: ${{ steps.semverup.outputs.bitergia-analytics-opensearch }}
+      opensearch_forced_version: ${{ steps.semverup.outputs.bitergia-analytics-opensearch_forced_version }}
+      dashboards_version: ${{ steps.semverup.outputs.bitergia-analytics-opensearch-dashboards }}
+      dashboards_forced_version: ${{ steps.semverup.outputs.bitergia-analytics-opensearch-dashboards_forced_version }}
+      plugin_version: ${{ steps.semverup.outputs.bitergia-analytics-plugin }}
+      plugin_forced_version: ${{ steps.semverup.outputs.bitergia-analytics-plugin_forced_version }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: bitergia-analytics/${{ matrix.repository }}
+          path: ${{ matrix.repository }}
+          token: '${{ secrets.ACCESS_TOKEN }}'
+          fetch-depth: 0
+
+      - name: Install release-tools
+        run: pip install git+https://github.com/Bitergia/release-tools.git#egg=release-tools
+      
+      - id: old-version
+        name: Get old version
+        run: |
+          if [ "${{ matrix.repository }}" == "bitergia-analytics-plugin" ]
+          then
+            version=$(jq '.version' package.json)
+          else
+            version=$(<version)
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+        working-directory: ${{ matrix.repository }}
+
+      - id: semverup
+        name: Get version number
+        continue-on-error: true
+        shell: bash {0}
+        run: |
+          old_version=${{ steps.old-version.outputs.version }}
+          if [ ${{ inputs.release_candidate }} == 'true' ]
+          then
+            rcArg='--pre-release'
+          else
+            rcArg=''
+          fi
+
+          version=$(semverup --dry-run --current-version $old_version $rcArg)
+          if [ -z $version ] && [ ${{ inputs.release_candidate }} != 'true' ] && [[ "$old_version" =~ .*rc.* ]]
+          then
+            echo "Create final version from rc"
+            version=$(semverup --bump-version patch)
+            forced_version=true
+          else
+            forced_version=false
+          fi
+
+          echo $version
+          echo "${{ matrix.repository }}=$version" >> $GITHUB_OUTPUT
+
+          if [ -z $version ] || [$forced_version == true]
+          then
+            echo "${{ matrix.repository }}_forced_version=true" >> $GITHUB_OUTPUT
+          else
+            echo "${{ matrix.repository }}_forced_version=false" >> $GITHUB_OUTPUT
+          fi
+        working-directory: ${{ matrix.repository }}
+   
+  semverup:
+    name: Choose highest version number
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+    outputs:
+      version: ${{ steps.version.outputs.new_version }}
+    steps:
+      - name: Choose version number
+        id: version
+        run: |
+          versions=(
+            ${{ needs.setup.outputs.bitergia_analytics_version }}
+            ${{ needs.setup.outputs.plugin_version }}
+            ${{ needs.setup.outputs.opensearch_version }}
+            ${{ needs.setup.outputs.dashboards_version }}
+          )
+          IFS=$'\n' new_version=($(sort -r -V <<<"${versions[*]}" | head -n1)); unset IFS
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo $new_version
+
+  bitergia-analytics-plugin:
+    name: Bitergia Analytics Plugin
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'bitergia-analytics-plugin'
+      module_repository: 'bitergia-analytics/bitergia-analytics-plugin'
+      module_directory: 'bitergia-analytics-plugin'
+      forced_version: ${{ needs.setup.outputs.plugin_forced_version }}
+    secrets:
+      access_token: ${{ secrets.ACCESS_TOKEN }}
+
+  bitergia-analytics-opensearch-dashboards:
+    name: Bitergia Analytics OpenSearch Dashboards
+    needs:
+      - variables-job
+      - setup
+      - semverup
+      - bitergia-analytics-plugin
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'bitergia-analytics-opensearch-dashboards'
+      module_repository: 'bitergia-analytics/bitergia-analytics-opensearch-dashboards'
+      module_directory: 'bitergia-analytics-opensearch-dashboards'
+      forced_version: ${{ needs.setup.outputs.dashboards_forced_version }}
+      plugin_url: ${{ needs.bitergia-analytics-plugin.outputs.plugin_url }}
+    secrets:
+      access_token: ${{ secrets.ACCESS_TOKEN }}
+    
+  bitergia-analytics-opensearch:
+    name: Bitergia Analytics OpenSearch
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'bitergia-analytics-opensearch'
+      module_repository: 'bitergia-analytics/bitergia-analytics-opensearch'
+      module_directory: 'bitergia-analytics-opensearch'
+      forced_version: ${{ needs.setup.outputs.opensearch_forced_version }}
+    secrets:
+      access_token: ${{ secrets.ACCESS_TOKEN }}
+  
+  bitergia-analytics:
+    name: Bitergia Analytics
+    runs-on: ubuntu-latest
+    needs:
+      - variables-job
+      - setup
+      - semverup
+      - bitergia-analytics-plugin
+      - bitergia-analytics-opensearch-dashboards
+      - bitergia-analytics-opensearch
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: bitergia-analytics/bitergia-analytics
+          token: ${{ secrets.ACCESS_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Set up Git config
+        run: |
+          git config --global user.email "${{ inputs.git_email }}"
+          git config --global user.name "${{ inputs.git_name }}"
+
+      - name: Install release-tools
+        run: pip install git+https://github.com/Bitergia/release-tools.git#egg=release-tools
+      
+      - id: version
+        name: Update version file
+        shell: bash
+        run: |
+          new_version=${{ needs.semverup.outputs.version }}
+          echo $new_version > version
+      
+      - name: Generate release notes
+        id: notes
+        env:
+          plugin_notes: "${{ needs.bitergia-analytics-plugin.outputs.notes }}"
+          opensearch_notes: "${{ needs.bitergia-analytics-opensearch.outputs.notes }}"
+          dashboards_notes: "${{ needs.bitergia-analytics-opensearch-dashboards.outputs.notes }}"
+        run: |
+          version=${{ needs.semverup.outputs.version }}
+          eof="EOF$(date +%s)"
+          release_file="releases/$version.md"
+          notes=''
+          if [ ${{ inputs.release_candidate }} == 'true' ]
+          then
+            newsArg=''
+            rcArg='--pre-release'
+          else
+            rcArg=''
+          fi
+
+          if [ ${{ needs.setup.outputs.bitergia_analytics_forced_version }} != true ]
+          then
+            notes "Bitergia Analytics" $version $newsArg --authors $rcArg
+            echo 'notes<<$eof' >> $GITHUB_OUTPUT
+            cat $release_file | tail -n +2 >> $GITHUB_OUTPUT
+            echo '$eof' >> $GITHUB_OUTPUT
+          else
+            echo "# Bitergia Analytics ${version}" > $release_file
+          fi
+          
+          cat << $eof >> $release_file
+          The following list describes the changes by component:
+
+          $opensearch_notes
+          $dashboards_notes
+          $plugin_notes
+          $eof
+
+          cat $release_file
+
+      - name: Generate NEWS
+        if: inputs.release_candidate == false
+        env:
+          notes_bitergia_analytics: "${{ steps.notes.outputs.notes }}"
+          notes_bitergia_analytics_plugin: "${{ needs.bitergia-analytics-plugin.outputs.notes }}"
+          notes_bitergia_analytics_opensearch: "${{ needs.bitergia-analytics-opensearch.outputs.notes }}"
+          notes_bitergia_analytics_opensearch_dashboards: "${{ needs.bitergia-analytics-opensearch-dashboards.outputs.notes }}"
+        run: |
+          version=${{ needs.semverup.outputs.version }}
+          news_file="NEWS"
+          old_news="NEWS_old"
+          new_notes="tmp_new_notes"
+          today=$(date -u "+%Y-%m-%d")
+          
+          packages=(
+          bitergia_analytics_opensearch
+          bitergia_analytics_opensearch_dashboards
+          bitergia_analytics_plugin)
+          
+          mv $news_file $old_news
+          touch $news_file $new_notes
+
+          echo "# Releases" >> $news_file
+          echo "" >> $news_file
+          echo "## Bitergia Analytics $version - ($today)" >> $news_file
+          echo "$notes_bitergia_analytics" >> $news_file
+          echo "" >> $news_file
+          for package in "${packages[@]}"
+          do
+              package_name=$(echo $package | tr '_' '-')
+              package_notes_var="notes_$package"
+              package_notes="${!package_notes_var}"
+              contents="$(echo "$package_notes" | tail -n +2)"
+              if [ ! -z "$contents" ]
+              then          
+                  echo "### $package_name" >> $new_notes
+                  echo "$contents" >> $new_notes
+                  echo "" >> $new_notes
+              fi
+          done
+          
+          echo "" >> $news_file
+          echo "The following list describes the changes by component:" >> $news_file
+          echo "" >> $news_file
+          cat $new_notes >> $news_file
+          
+          cat $old_news | tail -n +2 >> $news_file
+          
+          rm $old_news $new_notes
+          git add $news_file 
+          
+          cat $news_file
+      
+      - id: current_time
+        name: Store current time to get the release workflow
+        run: |
+          datetime=$(date +"%Y-%m-%dT%H:%M:%S%z")
+          echo "datetime=$datetime" >> $GITHUB_OUTPUT
+          echo $datetime
+
+      - id: publish
+        name: Publish new version.
+        run: |
+          if [ ${{ inputs.release_candidate }} == 'true' ]
+          then
+            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --no-cleanup --add-all
+          else
+            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --add-all
+          fi
+      
+      - id: wait-for-release
+        name: Wait for release to finish.
+        if: steps.publish.outcome == 'success'
+        run: |
+          url="https://api.github.com/repos/bitergia-analytics/bitergia-analytics/actions/workflows/release.yml/runs?created=>${{ steps.current_time.outputs.datetime }}"
+          while true
+          do
+            workflows=$(curl -sS -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" $url)
+            if [ $(echo $workflows | jq '.total_count') -eq 0 ]
+            then
+              echo "Release workflow did not start"
+              sleep 60
+              continue
+            fi
+
+            release_conclusion=$(echo $workflows | jq '.workflow_runs[0].conclusion')
+            release_status=$(echo $workflows | jq '.workflow_runs[0].status')
+            if [ $release_status = \"completed\" -a $release_conclusion = \"success\" ]
+            then
+              echo "Release completed!";
+              break;
+            elif [ $release_status = \"completed\" -a $release_conclusion != \"success\" ]
+            then
+              echo "Release failed!";
+              exit 1;
+            else
+              echo $release_conclusion $release_status
+              echo "Waiting for release..."
+              sleep 60
+            fi
+          done
+
+      - id: rollback
+        name: Rollback last commits and remove tag
+        if: steps.wait-for-release.outcome == 'failure'
+        run: |
+          git reset --hard HEAD~1
+          git push -f origin main
+          git tag -d ${{ needs.semverup.outputs.version }}
+          git push --delete origin ${{ needs.semverup.outputs.version }}
+
+          # Force to fail
+          exit 1
+
