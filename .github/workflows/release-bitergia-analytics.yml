@@ -192,7 +192,58 @@ jobs:
       forced_version: ${{ needs.setup.outputs.opensearch_forced_version }}
     secrets:
       access_token: ${{ secrets.ACCESS_TOKEN }}
-  
+
+  perceval-public-inbox:
+    name: perceval-public-inbox
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-grimoirelab-component.yml
+    with:
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'perceval-public-inbox'
+      module_repository: 'bitergia-analytics/grimoirelab-perceval-public-inbox'
+      module_directory: 'perceval-public-inbox'
+    secrets:
+      access_token: ${{ secrets.ACCESS_TOKEN }}
+
+  elk-public-inbox:
+    name: elk-public-inbox
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-grimoirelab-component.yml
+    with:
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'elk-public-inbox'
+      module_repository: 'bitergia-analytics/grimoirelab-elk-public-inbox'
+      module_directory: 'elk-public-inbox'
+    secrets:
+      access_token: ${{ secrets.ACCESS_TOKEN }}
+
+  sortinghat-openinfra:
+    name: sortinghat-openinfra
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-grimoirelab-component.yml
+    with:
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'sortinghat-openinfra'
+      module_repository: 'bitergia-analytics/sortinghat-openinfra'
+      module_directory: 'sortinghat-openinfra'
+    secrets:
+      access_token: ${{ secrets.ACCESS_TOKEN }}
+
   bitergia-analytics:
     name: Bitergia Analytics
     runs-on: ubuntu-latest
@@ -203,6 +254,9 @@ jobs:
       - bitergia-analytics-plugin
       - bitergia-analytics-opensearch-dashboards
       - bitergia-analytics-opensearch
+      - perceval-public-inbox
+      - elk-public-inbox
+      - sortinghat-openinfra
     steps:
       - name: Checkout source code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -232,6 +286,9 @@ jobs:
           plugin_notes: "${{ needs.bitergia-analytics-plugin.outputs.notes }}"
           opensearch_notes: "${{ needs.bitergia-analytics-opensearch.outputs.notes }}"
           dashboards_notes: "${{ needs.bitergia-analytics-opensearch-dashboards.outputs.notes }}"
+          perceval_public_inbox_notes: "${{ needs.perceval-public-inbox.outputs.notes }}"
+          elk_public_inbox_notes: "${{ needs.elk-public-inbox.outputs.notes }}"
+          sortinghat_openinfra_notes: "${{ needs.sortinghat-openinfra.outputs.notes }}"
         run: |
           version=${{ needs.semverup.outputs.version }}
           eof="EOF$(date +%s)"
@@ -261,6 +318,9 @@ jobs:
           $opensearch_notes
           $dashboards_notes
           $plugin_notes
+          $perceval_public_inbox_notes
+          $elk_public_inbox_notes
+          $sortinghat_openinfra_notes
           $eof
 
           cat $release_file
@@ -272,6 +332,9 @@ jobs:
           notes_bitergia_analytics_plugin: "${{ needs.bitergia-analytics-plugin.outputs.notes }}"
           notes_bitergia_analytics_opensearch: "${{ needs.bitergia-analytics-opensearch.outputs.notes }}"
           notes_bitergia_analytics_opensearch_dashboards: "${{ needs.bitergia-analytics-opensearch-dashboards.outputs.notes }}"
+          notes_perceval_public_inbox: "${{ needs.perceval-public-inbox.outputs.notes }}"
+          notes_elk_public_inbox: "${{ needs.elk-public-inbox.outputs.notes }}"
+          notes_sortinghat_openinfra: "${{ needs.sortinghat-openinfra.outputs.notes }}"
         run: |
           version=${{ needs.semverup.outputs.version }}
           news_file="NEWS"
@@ -282,7 +345,10 @@ jobs:
           packages=(
           bitergia_analytics_opensearch
           bitergia_analytics_opensearch_dashboards
-          bitergia_analytics_plugin)
+          bitergia_analytics_plugin
+          perceval_public_inbox
+          elk_public_inbox
+          sortinghat_openinfra)
           
           mv $news_file $old_news
           touch $news_file $new_notes
@@ -378,5 +444,4 @@ jobs:
 
           # Force to fail
           exit 1
-
 
