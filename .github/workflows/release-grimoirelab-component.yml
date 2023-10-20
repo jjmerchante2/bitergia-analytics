@@ -181,9 +181,9 @@ jobs:
         run: |
           if [ ${{ inputs.release_candidate }} == 'true' ]
           then
-            publish ${{ steps.version.outputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --no-cleanup
+            publish ${{ steps.version.outputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main --no-cleanup
           else
-            publish ${{ steps.version.outputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin
+            publish ${{ steps.version.outputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main
           fi
         working-directory: ${{ inputs.module_directory }}
 

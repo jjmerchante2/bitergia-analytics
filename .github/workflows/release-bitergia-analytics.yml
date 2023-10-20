@@ -396,9 +396,9 @@ jobs:
         run: |
           if [ ${{ inputs.release_candidate }} == 'true' ]
           then
-            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --no-cleanup --add-all
+            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --remote-branch main --push origin --no-cleanup --add-all
           else
-            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --add-all
+            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --remote-branch main --push origin --add-all
           fi
       
       - id: wait-for-release

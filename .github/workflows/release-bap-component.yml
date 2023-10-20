@@ -163,9 +163,9 @@ jobs:
         run: |
           if [ ${{ inputs.release_candidate }} == 'true' ]
           then
-            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --no-cleanup --add-all
+            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main --no-cleanup --add-all
           else
-            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --add-all
+            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main --add-all
           fi
         working-directory: ${{ inputs.module_directory }}
       
