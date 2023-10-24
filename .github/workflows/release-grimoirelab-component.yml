@@ -51,7 +51,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    environment: bap-release
     outputs:
       version: ${{ steps.version.outputs.version }}
       package_version: ${{ steps.version.outputs.package_version }}
