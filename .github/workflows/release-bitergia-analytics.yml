@@ -96,7 +96,7 @@ jobs:
           if [ -z $version ] && [ ${{ inputs.release_candidate }} != 'true' ] && [[ "$old_version" =~ .*rc.* ]]
           then
             echo "Create final version from rc"
-            version=$(semverup --bump-version patch)
+            version=$(semverup --dry-run --current-version $old_version --bump-version patch)
             forced_version=true
           else
             forced_version=false
@@ -216,6 +216,7 @@ jobs:
       - variables-job
       - setup
       - semverup
+      - perceval-public-inbox
     uses: ./.github/workflows/release-grimoirelab-component.yml
     with:
       git_email: ${{ needs.variables-job.outputs.git_email }}
@@ -224,6 +225,7 @@ jobs:
       module_name: 'elk-public-inbox'
       module_repository: 'bitergia-analytics/grimoirelab-elk-public-inbox'
       module_directory: 'elk-public-inbox'
+      dependencies: "${{ needs.perceval-public-inbox.outputs.package_version }}"
     secrets:
       access_token: ${{ secrets.ACCESS_TOKEN }}
 
