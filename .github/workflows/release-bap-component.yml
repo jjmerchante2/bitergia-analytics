@@ -207,7 +207,7 @@ jobs:
         if: steps.wait-for-release.outcome == 'success' && ${{ inputs.module_directory == 'bitergia-analytics-plugin' }}
         run: |
           url="https://api.github.com/repos/bitergia-analytics/bitergia-analytics-plugin/releases/tags/${{ inputs.version }}"
-          assets=$(curl -sS -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" $url)
+          assets=$(curl -sS -H "Authorization: token ${{ secrets.access_token }}" $url)
           plugin_url=$(echo $assets | jq '.assets[0].browser_download_url')
           echo "plugin_url=$plugin_url" >> $GITHUB_OUTPUT
           echo $plugin_url

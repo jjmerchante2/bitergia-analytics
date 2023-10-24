@@ -36,6 +36,7 @@ jobs:
   setup:
     name: Get version from each repository
     runs-on: ubuntu-latest
+    environment: bap-release
     needs:
       - variables-job
     strategy:
@@ -61,7 +62,7 @@ jobs:
         with:
           repository: bitergia-analytics/${{ matrix.repository }}
           path: ${{ matrix.repository }}
-          token: '${{ secrets.ACCESS_TOKEN }}'
+          token: '${{ secrets.BAP_BUILD_TOKEN }}'
           fetch-depth: 0
 
       - name: Install release-tools
@@ -151,7 +152,7 @@ jobs:
       module_directory: 'bitergia-analytics-plugin'
       forced_version: ${{ needs.setup.outputs.plugin_forced_version }}
     secrets:
-      access_token: ${{ secrets.ACCESS_TOKEN }}
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 
   bitergia-analytics-opensearch-dashboards:
     name: Bitergia Analytics OpenSearch Dashboards
@@ -172,7 +173,7 @@ jobs:
       forced_version: ${{ needs.setup.outputs.dashboards_forced_version }}
       plugin_url: ${{ needs.bitergia-analytics-plugin.outputs.plugin_url }}
     secrets:
-      access_token: ${{ secrets.ACCESS_TOKEN }}
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
     
   bitergia-analytics-opensearch:
     name: Bitergia Analytics OpenSearch
@@ -191,7 +192,7 @@ jobs:
       module_directory: 'bitergia-analytics-opensearch'
       forced_version: ${{ needs.setup.outputs.opensearch_forced_version }}
     secrets:
-      access_token: ${{ secrets.ACCESS_TOKEN }}
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 
   perceval-public-inbox:
     name: perceval-public-inbox
@@ -208,7 +209,7 @@ jobs:
       module_repository: 'bitergia-analytics/grimoirelab-perceval-public-inbox'
       module_directory: 'perceval-public-inbox'
     secrets:
-      access_token: ${{ secrets.ACCESS_TOKEN }}
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 
   elk-public-inbox:
     name: elk-public-inbox
@@ -227,7 +228,7 @@ jobs:
       module_directory: 'elk-public-inbox'
       dependencies: "${{ needs.perceval-public-inbox.outputs.package_version }}"
     secrets:
-      access_token: ${{ secrets.ACCESS_TOKEN }}
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 
   sortinghat-openinfra:
     name: sortinghat-openinfra
@@ -244,11 +245,12 @@ jobs:
       module_repository: 'bitergia-analytics/sortinghat-openinfra'
       module_directory: 'sortinghat-openinfra'
     secrets:
-      access_token: ${{ secrets.ACCESS_TOKEN }}
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 
   bitergia-analytics:
     name: Bitergia Analytics
     runs-on: ubuntu-latest
+    environment: bap-release
     needs:
       - variables-job
       - setup
@@ -264,7 +266,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           repository: bitergia-analytics/bitergia-analytics
-          token: ${{ secrets.ACCESS_TOKEN }}
+          token: ${{ secrets.BAP_BUILD_TOKEN }}
           fetch-depth: 0
       
       - name: Set up Git config
@@ -410,7 +412,7 @@ jobs:
           url="https://api.github.com/repos/bitergia-analytics/bitergia-analytics/actions/workflows/release.yml/runs?created=>${{ steps.current_time.outputs.datetime }}"
           while true
           do
-            workflows=$(curl -sS -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" $url)
+            workflows=$(curl -sS -H "Authorization: token ${{ secrets.BAP_BUILD_TOKEN }}" $url)
             if [ $(echo $workflows | jq '.total_count') -eq 0 ]
             then
               echo "Release workflow did not start"
