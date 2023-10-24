@@ -223,7 +223,7 @@ jobs:
       git_email: ${{ needs.variables-job.outputs.git_email }}
       git_name: ${{ needs.variables-job.outputs.git_name }}
       release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
-      module_name: 'elk-public-inbox'
+      module_name: 'grimoire-elk-public-inbox'
       module_repository: 'bitergia-analytics/grimoirelab-elk-public-inbox'
       module_directory: 'elk-public-inbox'
       dependencies: "${{ needs.perceval-public-inbox.outputs.package_version }}"
