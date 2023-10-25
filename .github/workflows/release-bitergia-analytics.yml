@@ -106,7 +106,7 @@ jobs:
           echo $version
           echo "${{ matrix.repository }}=$version" >> $GITHUB_OUTPUT
 
-          if [ -z $version ] || [$forced_version == true]
+          if [ -z $version ] || [ $forced_version == true ]
           then
             echo "${{ matrix.repository }}_forced_version=true" >> $GITHUB_OUTPUT
           else
