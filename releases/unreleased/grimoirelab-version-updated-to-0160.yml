@@ -1,0 +1,14 @@
+---
+title: GrimoireLab version updated to 0.16.0
+category: added
+author: Santiago Dueñas <sduenas@bitergia.com>
+issue: null
+notes: >
+  This version of GrimoireLab generally improves
+  the performance of the identities manager. Now,
+  individuals data will be loaded in the user
+  interface much faster; recommendations will be
+  generated for those identities updated after
+  a giving date only, and the users will be able
+  to add individuals to the workspace from the
+  individual profile page.
