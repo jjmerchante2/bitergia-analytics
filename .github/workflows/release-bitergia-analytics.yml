@@ -45,7 +45,11 @@ jobs:
           bitergia-analytics,
           bitergia-analytics-opensearch,
           bitergia-analytics-opensearch-dashboards,
-          bitergia-analytics-plugin
+          bitergia-analytics-plugin,
+          dotplot-vis-plugin,
+          network-vis-plugin,
+          polar-vis-plugin,
+          radar-vis-plugin
         ]
     outputs:
       bitergia_analytics_version: ${{ steps.semverup.outputs.bitergia-analytics }}
@@ -56,6 +60,14 @@ jobs:
       dashboards_forced_version: ${{ steps.semverup.outputs.bitergia-analytics-opensearch-dashboards_forced_version }}
       plugin_version: ${{ steps.semverup.outputs.bitergia-analytics-plugin }}
       plugin_forced_version: ${{ steps.semverup.outputs.bitergia-analytics-plugin_forced_version }}
+      dotplot_version: ${{ steps.semverup.outputs.dotplot-vis-plugin }}
+      dotplot_forced_version: ${{ steps.semverup.outputs.dotplot-vis-plugin_forced_version }}
+      network_version: ${{ steps.semverup.outputs.network-vis-plugin }}
+      network_forced_version: ${{ steps.semverup.outputs.network-vis-plugin_forced_version }}
+      polar_version: ${{ steps.semverup.outputs.polar-vis-plugin }}
+      polar_forced_version: ${{ steps.semverup.outputs.polar-vis-plugin_forced_version }}
+      radar_version: ${{ steps.semverup.outputs.radar-vis-plugin }}
+      radar_forced_version: ${{ steps.semverup.outputs.radar-vis-plugin_forced_version }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -71,7 +83,7 @@ jobs:
       - id: old-version
         name: Get old version
         run: |
-          if [ "${{ matrix.repository }}" == "bitergia-analytics-plugin" ]
+          if [ ${{ contains(matrix.repository, 'plugin') }} == 'true' ]
           then
             version=$(jq '.version' package.json)
           else
@@ -128,6 +140,10 @@ jobs:
           versions=(
             ${{ needs.setup.outputs.bitergia_analytics_version }}
             ${{ needs.setup.outputs.plugin_version }}
+            ${{ needs.setup.outputs.dotplot_version }}
+            ${{ needs.setup.outputs.network_version }}
+            ${{ needs.setup.outputs.polar_version }}
+            ${{ needs.setup.outputs.radar_version }}
             ${{ needs.setup.outputs.opensearch_version }}
             ${{ needs.setup.outputs.dashboards_version }}
           )
@@ -191,6 +207,82 @@ jobs:
       module_repository: 'bitergia-analytics/bitergia-analytics-opensearch'
       module_directory: 'bitergia-analytics-opensearch'
       forced_version: ${{ needs.setup.outputs.opensearch_forced_version }}
+    secrets:
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
+  
+  dotplot-vis-plugin:
+    name: Dotplot Visualization Plugin
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'dotplot-vis-plugin'
+      module_repository: 'bitergia-analytics/dotplot-vis-plugin'
+      module_directory: 'dotplot-vis-plugin'
+      forced_version: ${{ needs.setup.outputs.dotplot_forced_version }}
+    secrets:
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
+  
+  network-vis-plugin:
+    name: Network Visualization Plugin
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'network-vis-plugin'
+      module_repository: 'bitergia-analytics/network-vis-plugin'
+      module_directory: 'network-vis-plugin'
+      forced_version: ${{ needs.setup.outputs.network_forced_version }}
+    secrets:
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
+  
+  polar-vis-plugin:
+    name: Polar Visualization Plugin
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'polar-vis-plugin'
+      module_repository: 'bitergia-analytics/polar-vis-plugin'
+      module_directory: 'polar-vis-plugin'
+      forced_version: ${{ needs.setup.outputs.polar_forced_version }}
+    secrets:
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
+  
+  radar-vis-plugin:
+    name: Radar Visualization Plugin
+    needs:
+      - variables-job
+      - setup
+      - semverup
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'radar-vis-plugin'
+      module_repository: 'bitergia-analytics/radar-vis-plugin'
+      module_directory: 'radar-vis-plugin'
+      forced_version: ${{ needs.setup.outputs.radar_forced_version }}
     secrets:
       access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 
@@ -258,6 +350,10 @@ jobs:
       - bitergia-analytics-plugin
       - bitergia-analytics-opensearch-dashboards
       - bitergia-analytics-opensearch
+      - dotplot-vis-plugin
+      - network-vis-plugin
+      - polar-vis-plugin
+      - radar-vis-plugin
       - perceval-public-inbox
       - elk-public-inbox
       - sortinghat-openinfra
@@ -290,6 +386,10 @@ jobs:
           plugin_notes: "${{ needs.bitergia-analytics-plugin.outputs.notes }}"
           opensearch_notes: "${{ needs.bitergia-analytics-opensearch.outputs.notes }}"
           dashboards_notes: "${{ needs.bitergia-analytics-opensearch-dashboards.outputs.notes }}"
+          dotplot_notes: "${{ needs.dotplot-vis-plugin.outputs.notes }}"
+          network_notes: "${{ needs.network-vis-plugin.outputs.notes }}"
+          polar_notes: "${{ needs.polar-vis-plugin.outputs.notes }}"
+          radar_notes: "${{ needs.radar-vis-plugin.outputs.notes }}"
           perceval_public_inbox_notes: "${{ needs.perceval-public-inbox.outputs.notes }}"
           elk_public_inbox_notes: "${{ needs.elk-public-inbox.outputs.notes }}"
           sortinghat_openinfra_notes: "${{ needs.sortinghat-openinfra.outputs.notes }}"
@@ -322,6 +422,10 @@ jobs:
           $opensearch_notes
           $dashboards_notes
           $plugin_notes
+          $dotplot_notes
+          $network_notes
+          $polar_notes
+          $radar_notes
           $perceval_public_inbox_notes
           $elk_public_inbox_notes
           $sortinghat_openinfra_notes
@@ -336,6 +440,10 @@ jobs:
           notes_bitergia_analytics_plugin: "${{ needs.bitergia-analytics-plugin.outputs.notes }}"
           notes_bitergia_analytics_opensearch: "${{ needs.bitergia-analytics-opensearch.outputs.notes }}"
           notes_bitergia_analytics_opensearch_dashboards: "${{ needs.bitergia-analytics-opensearch-dashboards.outputs.notes }}"
+          notes_dotplot_vis_plugin: "${{ needs.dotplot-vis-plugin.outputs.notes }}"
+          notes_network_vis_plugin: "${{ needs.network-vis-plugin.outputs.notes }}"
+          notes_polar_vis_plugin: "${{ needs.polar-vis-plugin.outputs.notes }}"
+          notes_radar_vis_plugin: "${{ needs.radar-vis-plugin.outputs.notes }}"
           notes_perceval_public_inbox: "${{ needs.perceval-public-inbox.outputs.notes }}"
           notes_elk_public_inbox: "${{ needs.elk-public-inbox.outputs.notes }}"
           notes_sortinghat_openinfra: "${{ needs.sortinghat-openinfra.outputs.notes }}"
@@ -350,6 +458,10 @@ jobs:
           bitergia_analytics_opensearch
           bitergia_analytics_opensearch_dashboards
           bitergia_analytics_plugin
+          dotplot_vis_plugin
+          network_vis_plugin
+          polar_vis_plugin
+          radar_vis_plugin
           perceval_public_inbox
           elk_public_inbox
           sortinghat_openinfra)
