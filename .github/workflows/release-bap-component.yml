@@ -78,7 +78,7 @@ jobs:
         run: pip install git+https://github.com/Bitergia/release-tools.git#egg=release-tools
 
       - name: Update version in JSON files
-        if: ${{ inputs.module_directory == 'bitergia-analytics-plugin' }}
+        if: ${{ contains(inputs.module_directory, 'plugin') }}
         shell: bash
         run: |
           package_contents="$(jq '.version = "${{ inputs.version }}"' package.json)" && \
@@ -90,7 +90,7 @@ jobs:
       
       - id: version
         name: Update version file
-        if: ${{ inputs.module_directory != 'bitergia-analytics-plugin' }}
+        if: ${{ ! contains(inputs.module_directory, 'plugin') }}
         shell: bash
         run: |
           new_version=${{ inputs.version }}
