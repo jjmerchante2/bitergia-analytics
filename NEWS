@@ -1,5 +1,15 @@
 # Releases
 
+## Bitergia Analytics 0.14.1 - (2023-11-28)
+
+**New features:**
+
+ * GrimoireLab version updated to 0.18.0\
+   This version of GrimoireLab adds some missing fields
+   in the areas of code indices. Also, Gitdm is a new
+   sync method for SortingHat.
+
+
 ## Bitergia Analytics 0.14.0 - (2023-11-17)
 
 **New features:**
