@@ -170,27 +170,6 @@ jobs:
     secrets:
       access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 
-  bitergia-analytics-opensearch-dashboards:
-    name: Bitergia Analytics OpenSearch Dashboards
-    needs:
-      - variables-job
-      - setup
-      - semverup
-      - bitergia-analytics-plugin
-    uses: ./.github/workflows/release-bap-component.yml
-    with:
-      version: ${{ needs.semverup.outputs.version }}
-      git_email: ${{ needs.variables-job.outputs.git_email }}
-      git_name: ${{ needs.variables-job.outputs.git_name }}
-      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
-      module_name: 'bitergia-analytics-opensearch-dashboards'
-      module_repository: 'bitergia-analytics/bitergia-analytics-opensearch-dashboards'
-      module_directory: 'bitergia-analytics-opensearch-dashboards'
-      forced_version: ${{ needs.setup.outputs.dashboards_forced_version }}
-      plugin_url: ${{ needs.bitergia-analytics-plugin.outputs.plugin_url }}
-    secrets:
-      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
-    
   bitergia-analytics-opensearch:
     name: Bitergia Analytics OpenSearch
     needs:
@@ -283,6 +262,35 @@ jobs:
       module_repository: 'bitergia-analytics/radar-vis-plugin'
       module_directory: 'radar-vis-plugin'
       forced_version: ${{ needs.setup.outputs.radar_forced_version }}
+    secrets:
+      access_token: ${{ secrets.BAP_BUILD_TOKEN }}
+
+  bitergia-analytics-opensearch-dashboards:
+    name: Bitergia Analytics OpenSearch Dashboards
+    needs:
+      - variables-job
+      - setup
+      - semverup
+      - bitergia-analytics-plugin
+      - dotplot-vis-plugin
+      - network-vis-plugin
+      - polar-vis-plugin
+      - radar-vis-plugin
+    uses: ./.github/workflows/release-bap-component.yml
+    with:
+      version: ${{ needs.semverup.outputs.version }}
+      git_email: ${{ needs.variables-job.outputs.git_email }}
+      git_name: ${{ needs.variables-job.outputs.git_name }}
+      release_candidate: ${{ needs.variables-job.outputs.release_candidate }}
+      module_name: 'bitergia-analytics-opensearch-dashboards'
+      module_repository: 'bitergia-analytics/bitergia-analytics-opensearch-dashboards'
+      module_directory: 'bitergia-analytics-opensearch-dashboards'
+      forced_version: ${{ needs.setup.outputs.dashboards_forced_version }}
+      plugin_url: ${{ needs.bitergia-analytics-plugin.outputs.plugin_url }}
+      dotplot_url: ${{ needs.dotplot-vis-plugin.outputs.plugin_url }}
+      network_url: ${{ needs.network-vis-plugin.outputs.plugin_url }}
+      polar_url: ${{ needs.polar-vis-plugin.outputs.plugin_url }}
+      radar_url: ${{ needs.radar-vis-plugin.outputs.plugin_url }}
     secrets:
       access_token: ${{ secrets.BAP_BUILD_TOKEN }}
 

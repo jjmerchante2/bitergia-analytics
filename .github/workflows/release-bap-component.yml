@@ -39,6 +39,22 @@ on:
         description: 'Installable URL for Bitergia Analytics plugin.'
         type: string
         required: false
+      dotplot_url:
+        description: 'Installable URL for Dotplot visualization plugin.'
+        type: string
+        required: false
+      network_url:
+        description: 'Installable URL for Network visualization plugin.'
+        type: string
+        required: false
+      polar_url:
+        description: 'Installable URL for Polar visualization plugin.'
+        type: string
+        required: false
+      radar_url:
+        description: 'Installable URL for Radar visualization plugin.'
+        type: string
+        required: false
     secrets:
       access_token:
         description: 'Token for updating repositories'
@@ -49,7 +65,7 @@ on:
         description: "Notes content for the package"
         value: ${{ jobs.release.outputs.notes }}
       plugin_url:
-        description: "Installable URL for BAP plugin"
+        description: "Installable URL for plugin"
         value: ${{ jobs.release.outputs.plugin_url }}
 
 jobs:
@@ -97,14 +113,25 @@ jobs:
           echo $new_version > version
         working-directory: ${{ inputs.module_directory }}
 
-      - name: Update plugin URL in Dockerfile
+      - name: Update plugin URLs in Dockerfile
         if: ${{ inputs.module_directory == 'bitergia-analytics-opensearch-dashboards' }}
         id: dockerfile
         shell: bash
         run: |
-          url='${{ inputs.plugin_url }}'
-          line="RUN opensearch-dashboards-plugin install $url"
+          line="RUN opensearch-dashboards-plugin install ${{ inputs.plugin_url }}"
           sed -i "/bitergia-analytics-plugin/s|.*|$line|" Dockerfile
+
+          line="RUN opensearch-dashboards-plugin install ${{ inputs.radar_url }}"
+          sed -i "/radar/s|.*|$line|" Dockerfile
+
+          line="RUN opensearch-dashboards-plugin install ${{ inputs.network_url }}"
+          sed -i "/network/s|.*|$line|" Dockerfile
+
+          line="RUN opensearch-dashboards-plugin install ${{ inputs.dotplot_url }}"
+          sed -i "/dotplot/s|.*|$line|" Dockerfile
+
+          line="RUN opensearch-dashboards-plugin install ${{ inputs.polar_url }}"
+          sed -i "/polar/s|.*|$line|" Dockerfile
         working-directory: ${{ inputs.module_directory }}
       
       - id: notes
@@ -200,18 +227,17 @@ jobs:
               sleep 60
             fi
           done
-      
+
       - id: assets
         name: Get plugin installable URL
         shell: bash
-        if: steps.wait-for-release.outcome == 'success' && ${{ inputs.module_directory == 'bitergia-analytics-plugin' }}
+        if: steps.wait-for-release.outcome == 'success' && ${{ contains(inputs.module_directory, 'plugin') }}
         run: |
-          url="https://api.github.com/repos/bitergia-analytics/bitergia-analytics-plugin/releases/tags/${{ inputs.version }}"
-          assets=$(curl -sS -H "Authorization: token ${{ secrets.access_token }}" $url)
-          plugin_url=$(echo $assets | jq '.assets[0].browser_download_url')
+          osd_version=$(jq -r '.opensearchDashboardsVersion' opensearch_dashboards.json)
+          plugin_url="https://github.com/${{ inputs.module_repository}}/releases/download/${{ inputs.version }}/${{ inputs.module_name }}-${{ inputs.version }}_${osd_version}.zip"
           echo "plugin_url=$plugin_url" >> $GITHUB_OUTPUT
-          echo $plugin_url
-      
+        working-directory: ${{ inputs.module_directory }}
+
       - id: rollback
         name: Rollback last commits and remove tag
         if: steps.wait-for-release.outcome == 'failure'
