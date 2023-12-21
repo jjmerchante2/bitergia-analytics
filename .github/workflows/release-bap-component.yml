@@ -231,7 +231,7 @@ jobs:
       - id: assets
         name: Get plugin installable URL
         shell: bash
-        if: steps.wait-for-release.outcome == 'success' && ${{ contains(inputs.module_directory, 'plugin') }}
+        if: ${{ steps.wait-for-release.outcome == 'success' && contains(inputs.module_directory, 'plugin') }}
         run: |
           osd_version=$(jq -r '.opensearchDashboardsVersion' opensearch_dashboards.json)
           plugin_url="https://github.com/${{ inputs.module_repository}}/releases/download/${{ inputs.version }}/${{ inputs.module_name }}-${{ inputs.version }}_${osd_version}.zip"
