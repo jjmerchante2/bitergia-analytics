@@ -234,7 +234,8 @@ jobs:
         if: ${{ steps.wait-for-release.outcome == 'success' && contains(inputs.module_directory, 'plugin') }}
         run: |
           osd_version=$(jq -r '.opensearchDashboardsVersion' opensearch_dashboards.json)
-          plugin_url="https://github.com/${{ inputs.module_repository}}/releases/download/${{ inputs.version }}/${{ inputs.module_name }}-${{ inputs.version }}_${osd_version}.zip"
+          filename_version=$(jq -r '.version | scan("^[0-9.]+")' package.json)
+          plugin_url="https://github.com/${{ inputs.module_repository}}/releases/download/${{ inputs.version }}/${{ inputs.module_name }}-${filename_version}_${osd_version}.zip"
           echo "plugin_url=$plugin_url" >> $GITHUB_OUTPUT
         working-directory: ${{ inputs.module_directory }}
 
