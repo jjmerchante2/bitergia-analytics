@@ -1,9 +1,0 @@
----
-title: GrimoireLab 0.19.0
-category: dependency
-author: Santiago Dueñas <sduenas@bitergia.com>
-issue: null
-notes: >
-  This version of GrimoireLab improves the performance
-  generating affiliations for identities plus improves
-  the user experience on the identities manager.
