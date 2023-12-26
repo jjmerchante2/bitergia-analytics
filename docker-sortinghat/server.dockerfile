@@ -1,4 +1,4 @@
-FROM grimoirelab/sortinghat:0.18.0
+FROM grimoirelab/sortinghat:0.19.0
 
 ADD settings.py /opt/venv/lib/python3.9/site-packages/sortinghat/config/settings.py
 
