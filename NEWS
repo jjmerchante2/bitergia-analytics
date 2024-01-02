@@ -1,5 +1,71 @@
 # Releases
 
+## Bitergia Analytics 0.15.0 - (2024-01-02)
+
+
+
+The following list describes the changes by component:
+
+### bitergia-analytics-opensearch
+
+**New features:**
+
+ * Upgrade to OpenSerach 2.11.1\
+   OpenSearch version has been upgraded to 2.11.1.
+
+### bitergia-analytics-opensearch-dashboards
+
+**New features:**
+
+ * Upgrade to OpenSearch Dashboards 2.11.1\
+   OpenSearch Dashboard has been updated to 2.11.1 version to fix the
+   problems found navigating between dashboards.
+
+### bitergia-analytics-plugin
+
+**New features:**
+
+ * Upgrade to OpenSearch Dashboards 2.11.1\
+   OpenSearch Dashboard has been updated to 2.11.1 version to fix the
+   problems found navigating between dashboards.
+
+### dotplot-vis-plugin
+
+**New features:**
+
+ * Upgrade to OpenSearch Dashboards 2.11.1\
+   OpenSearch Dashboard has been updated to 2.11.1 version to fix the
+   problems found navigating between dashboards.
+
+### network-vis-plugin
+
+**New features:**
+
+ * Upgrade to OpenSearch Dashboards 2.11.1\
+   OpenSearch Dashboard has been updated to 2.11.1 version to fix the
+   problems found navigating between dashboards.
+
+### polar-vis-plugin
+
+**New features:**
+
+ * Upgrade to OpenSearch Dashboards 2.11.1\
+   OpenSearch Dashboard has been updated to 2.11.1 version to fix the
+   problems found navigating between dashboards.
+
+### radar-vis-plugin
+
+**New features:**
+
+ * Upgrade to OpenSearch Dashboards 2.11.1\
+   OpenSearch Dashboard has been updated to 2.11.1 version to fix the
+   problems found navigating between dashboards.
+
+### elk-public-inbox
+  
+  * Update Poetry's package dependencies
+
+
 ## Bitergia Analytics 0.14.2 - (2023-12-26)
 
 **Dependencies updateds:**
