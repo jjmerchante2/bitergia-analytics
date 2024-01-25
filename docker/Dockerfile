@@ -11,4 +11,5 @@ LABEL org.opencontainers.image.vendor="Bitergia"
 LABEL org.opencontainers.image.authors="sduenas@bitergia.com"
 
 RUN sudo pip install perceval-public-inbox
-RUN sudo pip install grimoire-elk-public-inbox
+RUN sudo pip install perceval-topicbox
+RUN sudo pip install bap-elk-backends
