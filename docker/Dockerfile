@@ -1,7 +1,7 @@
 # Copyright (C) Bitergia
 # GPLv3 License
 
-FROM grimoirelab/grimoirelab:0.19.0
+FROM grimoirelab/grimoirelab:0.20.0
 
 LABEL org.opencontainers.image.title="Bitergia Analytics"
 LABEL org.opencontainers.image.description="Bitergia Analytics service"
