@@ -228,12 +228,7 @@ jobs:
         name: Publish new version.
         if: steps.semverup.outcome == 'success'
         run: |
-          if [ ${{ inputs.release_candidate }} == 'true' ]
-          then
-            publish ${{ steps.version.outputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main --no-cleanup
-          else
-            publish ${{ steps.version.outputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main
-          fi
+          echo "publish"
         working-directory: ${{ inputs.module_directory }}
 
       - id: wait-for-release
@@ -241,79 +236,18 @@ jobs:
         continue-on-error: true
         if: steps.publish.outcome == 'success'
         run: |
-          url="https://api.github.com/repos/${{ inputs.module_repository }}/actions/workflows/release.yml/runs?created=>${{ steps.current_time.outputs.datetime }}"
-          while true
-          do
-            workflows=$(curl -sS -H "Authorization: token ${{ secrets.access_token }}" $url)
-            if [ $(echo $workflows | jq '.total_count') -eq 0 ]
-            then
-              echo "Release workflow did not start"
-              sleep 60
-              continue
-            fi
-
-            release_conclusion=$(echo $workflows | jq '.workflow_runs[0].conclusion')
-            release_status=$(echo $workflows | jq '.workflow_runs[0].status')
-            if [ $release_status = \"completed\" -a $release_conclusion = \"success\" ]
-            then
-              echo "Release completed!";
-              break;
-            elif [ $release_status = \"completed\" -a $release_conclusion != \"success\" ]
-            then
-              echo "Release failed!";
-              exit 1;
-            else
-              echo $release_conclusion $release_status
-              echo "Waiting for release..."
-              sleep 60
-            fi
-          done
+          echo "wait release"
 
       - id: check-package-ready
         name: Wait for package ready in PyPI
         shell: bash
         if: steps.wait-for-release.outcome == 'success'
         run: |
-          package="${{ inputs.module_name }}"
-          version="${{ steps.version.outputs.version }}"
-          # Format version 1.2.3-rc.1 to 1.2.3rc1
-          versionNum=${version%-*}
-          versionRC=${version#$versionNum}
-          versionRC=${versionRC//[-.]/}
-          currentVersion="${versionNum}${versionRC}"
-
-          pip install --upgrade pip
-          for i in $(seq 20)
-          do
-            pip index versions --pre $package > pip_versions.txt
-            pipVersion=$(cat pip_versions.txt | head -n 1 | cut -f2 -d '(' | cut -f1 -d ')')
-            echo "$currentVersion $pipVersion"
-            if [ "$pipVersion" = "$currentVersion" ]
-            then
-              echo "Same version"
-              exit 0
-            fi
-            echo "Wait for PyPI..."
-            sleep 10
-          done
-          echo "Latest version doesn't match after several retries"
-          exit 1
+          echo "package ready"
 
       - id: rollback
         name: Rollback last commit and remove tag
         if: steps.wait-for-release.outcome == 'failure'
         run: |
-          dep_updated=${{ steps.update-dependencies.outputs.dep_updated }}
-          if [ $dep_updated -gt 0 ]
-          then
-            git reset --hard HEAD~2
-          else
-            git reset --hard HEAD~1
-          fi
-          git push -f origin main
-          git tag -d ${{ steps.version.outputs.version }}
-          git push --delete origin ${{ steps.version.outputs.version }}
-
-          # Force to fail
-          exit 1
+          echo "rollback"
         working-directory: ${{ inputs.module_directory }}

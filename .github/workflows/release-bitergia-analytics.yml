@@ -542,54 +542,17 @@ jobs:
       - id: publish
         name: Publish new version.
         run: |
-          if [ ${{ inputs.release_candidate }} == 'true' ]
-          then
-            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --remote-branch main --push origin --no-cleanup --add-all
-          else
-            publish ${{ needs.semverup.outputs.version  }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --remote-branch main --push origin --add-all
-          fi
+          echo "publish"
       
       - id: wait-for-release
         name: Wait for release to finish.
         if: steps.publish.outcome == 'success'
         run: |
-          url="https://api.github.com/repos/bitergia-analytics/bitergia-analytics/actions/workflows/release.yml/runs?created=>${{ steps.current_time.outputs.datetime }}"
-          while true
-          do
-            workflows=$(curl -sS -H "Authorization: token ${{ secrets.BAP_BUILD_TOKEN }}" $url)
-            if [ $(echo $workflows | jq '.total_count') -eq 0 ]
-            then
-              echo "Release workflow did not start"
-              sleep 60
-              continue
-            fi
-
-            release_conclusion=$(echo $workflows | jq '.workflow_runs[0].conclusion')
-            release_status=$(echo $workflows | jq '.workflow_runs[0].status')
-            if [ $release_status = \"completed\" -a $release_conclusion = \"success\" ]
-            then
-              echo "Release completed!";
-              break;
-            elif [ $release_status = \"completed\" -a $release_conclusion != \"success\" ]
-            then
-              echo "Release failed!";
-              exit 1;
-            else
-              echo $release_conclusion $release_status
-              echo "Waiting for release..."
-              sleep 60
-            fi
-          done
+          echo "wait for release"
 
       - id: rollback
         name: Rollback last commits and remove tag
         if: steps.wait-for-release.outcome == 'failure'
         run: |
-          git reset --hard HEAD~1
-          git push -f origin main
-          git tag -d ${{ needs.semverup.outputs.version }}
-          git push --delete origin ${{ needs.semverup.outputs.version }}
-
-          # Force to fail
-          exit 1
+          echo "rollback"
 

@@ -209,12 +209,7 @@ jobs:
         if: ${{ steps.versions.outputs.updated == 1 }}
         name: Publish new version.
         run: |
-          if [ ${{ inputs.release_candidate }} == 'true' ]
-          then
-            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main --no-cleanup --add-all
-          else
-            publish ${{ inputs.version }} "${{ inputs.git_name }} <${{ inputs.git_email }}>" --push origin --remote-branch main --add-all
-          fi
+          echo "publish"
         working-directory: ${{ inputs.module_directory }}
       
       - id: wait-for-release
@@ -222,33 +217,7 @@ jobs:
         name: Wait for release to finish.
         continue-on-error: true
         run: |
-          url="https://api.github.com/repos/${{ inputs.module_repository }}/actions/workflows/release.yml/runs?created=>${{ steps.current_time.outputs.datetime }}"
-          while true
-          do
-            workflows=$(curl -sS -H "Authorization: token ${{ secrets.access_token }}" $url)
-            if [ $(echo $workflows | jq '.total_count') -eq 0 ]
-            then
-              echo "Release workflow did not start"
-              sleep 60
-              continue
-            fi
-
-            release_conclusion=$(echo $workflows | jq '.workflow_runs[0].conclusion')
-            release_status=$(echo $workflows | jq '.workflow_runs[0].status')
-            if [ $release_status = \"completed\" -a $release_conclusion = \"success\" ]
-            then
-              echo "Release completed!";
-              break;
-            elif [ $release_status = \"completed\" -a $release_conclusion != \"success\" ]
-            then
-              echo "Release failed!";
-              exit 1;
-            else
-              echo $release_conclusion $release_status
-              echo "Waiting for release..."
-              sleep 60
-            fi
-          done
+          echo "wait for release"
 
       - id: assets
         name: Get plugin installable URL
@@ -263,13 +232,7 @@ jobs:
 
       - id: rollback
         name: Rollback last commits and remove tag
-        if: steps.wait-for-release.outcome == 'failure'
+        if: (steps.wait-for-release.outcome == 'failure') && (steps.versions.outputs.updated == 1)
         run: |
-          git reset --hard HEAD~1
-          git push -f origin main
-          git tag -d ${{ inputs.version }}
-          git push --delete origin ${{ inputs.version }}
-
-          # Force to fail
-          exit 1
+          echo "rollback"
         working-directory: ${{ inputs.module_directory }}
