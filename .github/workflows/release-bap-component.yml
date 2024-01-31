@@ -103,6 +103,25 @@ jobs:
           echo -E "${osd_contents}" > opensearch_dashboards.json
           echo ${osd_contents}
         working-directory: ${{ inputs.module_directory }}
+
+      - id: versions
+        name: Compare versions to check if this should be updated
+        run: |
+          if [ ${{ contains(inputs.module_repository, 'plugin') }} == 'true' ]
+          then
+            version=$(jq -r '.version' package.json)
+          else
+            version=$(<version)
+          fi
+          echo "Old version: $version"
+          echo "New version: ${{ inputs.version }}"
+          if [ "$version" = "${{ inputs.version }}" ]
+          then
+            echo "updated=0" >> $GITHUB_OUTPUT
+          else
+            echo "updated=1" >> $GITHUB_OUTPUT
+          fi
+        working-directory: ${{ inputs.module_directory }}
       
       - id: version
         name: Update version file
@@ -179,6 +198,7 @@ jobs:
         working-directory: ${{ inputs.module_directory }}
       
       - id: current_time
+        if: ${{ steps.versions.outputs.updated == 1 }}
         name: Store current time to get the release workflow
         run: |
           datetime=$(date +"%Y-%m-%dT%H:%M:%S%z")
@@ -186,6 +206,7 @@ jobs:
           echo $datetime
 
       - id: publish
+        if: ${{ steps.versions.outputs.updated == 1 }}
         name: Publish new version.
         run: |
           if [ ${{ inputs.release_candidate }} == 'true' ]
@@ -197,6 +218,7 @@ jobs:
         working-directory: ${{ inputs.module_directory }}
       
       - id: wait-for-release
+        if: ${{ steps.versions.outputs.updated == 1 }}
         name: Wait for release to finish.
         continue-on-error: true
         run: |
@@ -231,7 +253,7 @@ jobs:
       - id: assets
         name: Get plugin installable URL
         shell: bash
-        if: ${{ steps.wait-for-release.outcome == 'success' && contains(inputs.module_directory, 'plugin') }}
+        if: ${{ ( steps.wait-for-release.outcome == 'success' || steps.versions.outputs.updated == 0 ) && contains(inputs.module_directory, 'plugin') }}
         run: |
           osd_version=$(jq -r '.opensearchDashboardsVersion' opensearch_dashboards.json)
           filename_version=$(jq -r '.version | scan("^[0-9.]+")' package.json)
