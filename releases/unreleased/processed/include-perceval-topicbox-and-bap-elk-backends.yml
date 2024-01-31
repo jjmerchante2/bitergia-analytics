@@ -1,8 +1,0 @@
----
-title: Include perceval-topicbox and BAP ELK Backends
-category: added
-author: Jose Javier Merchante <jjmerchante@bitergia.com>
-issue: null
-notes: >
-  Include Topicbox Perceval backend in BAP release and a common
-  package for GrimoireELK backends for Bitergia Analytics.
