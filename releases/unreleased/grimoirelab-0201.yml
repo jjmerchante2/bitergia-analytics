@@ -1,0 +1,8 @@
+---
+title: GrimoireLab 0.20.0
+category: dependency
+author: Jose Javier Merchante <jjmerchante@bitergia.com>
+issue: null
+notes: >
+  This version of GrimoireLab fixes a bug that prevented
+  users from logging into SortingHat.
