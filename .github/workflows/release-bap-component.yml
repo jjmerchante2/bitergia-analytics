@@ -93,17 +93,6 @@ jobs:
       - name: Install release-tools
         run: pip install git+https://github.com/Bitergia/release-tools.git#egg=release-tools
 
-      - name: Update version in JSON files
-        if: ${{ contains(inputs.module_directory, 'plugin') }}
-        shell: bash
-        run: |
-          package_contents="$(jq '.version = "${{ inputs.version }}"' package.json)" && \
-          echo -E "${package_contents}" > package.json
-          osd_contents="$(jq '.version = "${{ inputs.version }}"' opensearch_dashboards.json)" && \
-          echo -E "${osd_contents}" > opensearch_dashboards.json
-          echo ${osd_contents}
-        working-directory: ${{ inputs.module_directory }}
-
       - id: versions
         name: Compare versions to check if this should be updated
         run: |
@@ -121,6 +110,17 @@ jobs:
           else
             echo "updated=1" >> $GITHUB_OUTPUT
           fi
+        working-directory: ${{ inputs.module_directory }}
+
+      - name: Update version in JSON files
+        if: ${{ contains(inputs.module_directory, 'plugin') }}
+        shell: bash
+        run: |
+          package_contents="$(jq '.version = "${{ inputs.version }}"' package.json)" && \
+          echo -E "${package_contents}" > package.json
+          osd_contents="$(jq '.version = "${{ inputs.version }}"' opensearch_dashboards.json)" && \
+          echo -E "${osd_contents}" > opensearch_dashboards.json
+          echo ${osd_contents}
         working-directory: ${{ inputs.module_directory }}
       
       - id: version
